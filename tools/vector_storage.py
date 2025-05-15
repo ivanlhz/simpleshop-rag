@@ -1,11 +1,16 @@
 import json
-
+import os
+from dotenv import load_dotenv
+from langchain_openai import OpenAIEmbeddings
 from mappers.product_catalog_mapper import get_products_documents
 from mappers.profile_mapper import get_profile_documents
+from langchain_community.vectorstores import FAISS
 
 profile_data_file_path="../data/client_profiles.json"
 products_data_file_path="../data/product_catalog.json"
+VECTOR_STORE_FAISS_NAME = "../data/db"
 
+load_dotenv()
 
 def get_client_profiles_documents():
     """Get the client profile documents"""
@@ -39,4 +44,41 @@ def get_product_catalog_documents():
 
 
 
-print(get_product_catalog_documents())
+def get_vector_storage():
+    """Create the vector storage"""
+    profile_documents = get_client_profiles_documents()
+    product_documents = get_product_catalog_documents()
+    all_documents = profile_documents + product_documents
+
+    embeddings_model = OpenAIEmbeddings()
+
+    vector_store: FAISS
+
+    if os.path.exists(VECTOR_STORE_FAISS_NAME):
+        print(f"Loading existing Vector Store from '{VECTOR_STORE_FAISS_NAME}'...")
+        try:
+            vector_store = FAISS.load_local(VECTOR_STORE_FAISS_NAME, embeddings_model,
+                             allow_dangerous_deserialization=True)
+            print("Vector Store loaded.")
+        except Exception as e:
+            print(f"Could not load existing Vector Store: {e}. A new one will be created.")
+            vector_store = None
+    else :
+        vector_store = FAISS.from_documents(all_documents, embeddings_model)
+        vector_store.save_local(VECTOR_STORE_FAISS_NAME)
+
+    return vector_store
+
+def get_user_profile_info(name: str):
+    """Get user profile info from the vector store"""
+    vector_storage = get_vector_storage()
+    retriever = vector_storage.as_retriever(search_kwargs={'k': 3, 'filter': {'entity_type': 'profile'}})
+    result = retriever.invoke(f"profile information for user {name}")
+    return result
+
+def search_product(query: str):
+    """Get information about product from vector store"""
+    vector_storage = get_vector_storage()
+    retriever = vector_storage.as_retriever(search_kwargs={'k': 3, 'filter': {'entity_type': 'product'}})
+    result = retriever.invoke(f"{query}")
+    return result
