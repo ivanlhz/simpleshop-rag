@@ -6,10 +6,10 @@ from langchain_openai import ChatOpenAI
 from langchain_core.tools import Tool
 from langsmith import Client
 
-from tools.vector_storage import get_user_profile_info
+from tools.vector_storage import get_user_profile_info, search_product
 
 
-def lookup_profile_info(name: str):
+def profile_info_and_search_product_agent(name: str):
     llm = ChatOpenAI(model='gpt-4o-mini', temperature=0)
     template = """Retrieve all client information for client name: {client_name}."""
     prompt_template = PromptTemplate(template=template, input_variables=["client_name"])
@@ -18,6 +18,11 @@ def lookup_profile_info(name: str):
             name="Get the client information",
             func=get_user_profile_info,
             description="useful when you need get the client information",
+        ),
+        Tool(
+            name="Get the product information",
+            func=search_product,
+            description="useful when you need get a product information that fit the client",
         )
     ]
     client = Client(api_key=os.getenv("LANGSMITH_API_KEY"))
@@ -32,5 +37,5 @@ def lookup_profile_info(name: str):
     return result["output"]
 
 if __name__ == "__main__":
-    lookup_profile_info('User2')
+    profile_info_and_search_product_agent('Soy el cliente User3, estoy buscando un pantalon, que producto me recomiendas?')
 
