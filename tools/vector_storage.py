@@ -6,9 +6,10 @@ from mappers.product_catalog_mapper import get_products_documents
 from mappers.profile_mapper import get_profile_documents
 from langchain_community.vectorstores import FAISS
 
-profile_data_file_path="../data/client_profiles.json"
-products_data_file_path="../data/product_catalog.json"
-VECTOR_STORE_FAISS_NAME = "../data/db"
+# Cargar rutas desde variables de entorno, con valores por defecto si no existen
+profile_data_file_path = os.getenv("PROFILE_DATA_FILE_PATH", "./data/client_profiles.json")
+products_data_file_path = os.getenv("PRODUCTS_DATA_FILE_PATH", "./data/product_catalog.json")
+VECTOR_STORE_FAISS_NAME = os.getenv("VECTOR_STORE_FAISS_NAME", "./data/db")
 
 load_dotenv()
 
@@ -80,5 +81,13 @@ def search_product(query: str):
     """Get information about product from vector store"""
     vector_storage = get_vector_storage()
     retriever = vector_storage.as_retriever(search_kwargs={'k': 3, 'filter': {'entity_type': 'product'}})
-    result = retriever.invoke(f"{query}")
-    return result
+    docs = retriever.invoke(f"{query}")
+    
+    if not docs or len(docs) == 0:
+        return f"No se encontró información para la consulta: {query}. Por favor intenta con otra búsqueda."
+    
+    product_info = []
+    for doc in docs:
+        product_info.append(doc.page_content)
+    
+    return "\n\n".join(product_info)

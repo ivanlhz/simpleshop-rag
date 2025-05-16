@@ -1,3 +1,7 @@
+"""
+Este archivo es otra manera de hacer algo parecido a lo que hace Pydantic AI, 
+pero usando Langchain y Langsmith para el tracking.
+"""
 import os
 
 from langchain.agents import create_react_agent, AgentExecutor
